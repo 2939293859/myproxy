@@ -38,7 +38,7 @@ CONFIG='{
             "decryption": "none"
         },
         "streamSettings": {
-            "network": "kcp"
+            "network": "tcp"
         }
     }],
     "outbounds": [{
