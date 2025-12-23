@@ -5,17 +5,14 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+echo -e "${GREEN}开启BBR...${NC}"
+sudo modprobe tcp_bbr
+echo 'net.core.default_qdisc=fq' | sudo tee -a /etc/sysctl.conf
+echo 'net.ipv4.tcp_congestion_control=bbr' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+sysctl net.ipv4.tcp_congestion_control
 
 echo -e "${GREEN}开始安装 Xray...${NC}"
-
-# === 步骤 1：更新系统并安装 curl ===
-echo -e "${YELLOW}正在更新系统并安装 curl...${NC}"
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl
-if ! command -v curl &> /dev/null; then
-    echo -e "${RED}curl 安装失败，请检查网络！${NC}"
-    exit 1
-fi
 
 # === 步骤 2：下载并安装 Xray ===
 echo -e "${YELLOW}正在安装 Xray...${NC}"
@@ -41,7 +38,7 @@ CONFIG='{
             "decryption": "none"
         },
         "streamSettings": {
-            "network": "tcp"
+            "network": "kcp"
         }
     }],
     "outbounds": [{
