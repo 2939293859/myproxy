@@ -11,32 +11,45 @@ echo "▶ 更新系统 & 安装依赖..."
 apt update -y
 apt install -y curl unzip jq openssl
 
-echo "▶ 安装 Xray-core..."
+echo "▶ 安装 / 更新 Xray-core..."
 bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 
-# 确保 xray 在 PATH 中
 XRAY_BIN=$(command -v xray)
 
-echo "▶ 生成 REALITY 密钥对..."
+if [[ -z "$XRAY_BIN" ]]; then
+  echo "❌ 未找到 xray 可执行文件"
+  exit 1
+fi
+
+echo "▶ 生成 REALITY PrivateKey..."
 KEYS=$(${XRAY_BIN} x25519)
 
-PRIVATE_KEY=$(echo "$KEYS" | sed -n 's/^Private key: //p')
-PUBLIC_KEY=$(echo "$KEYS" | sed -n 's/^Public key: //p')
+PRIVATE_KEY=$(echo "$KEYS" | sed -n 's/^PrivateKey: *//p')
 
-if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
-  echo "❌ REALITY 密钥生成失败"
+if [[ -z "$PRIVATE_KEY" ]]; then
+  echo "❌ PrivateKey 生成失败，原始输出如下："
   echo "$KEYS"
   exit 1
 fi
 
-echo "  ✔ Private Key 已生成"
-echo "  ✔ Public  Key 已生成"
+echo "  ✔ PrivateKey 已生成"
+
+echo "▶ 由 PrivateKey 推导 PublicKey..."
+PUB_OUT=$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY")
+PUBLIC_KEY=$(echo "$PUB_OUT" | sed -n 's/^Public key: *//p')
+
+if [[ -z "$PUBLIC_KEY" ]]; then
+  echo "❌ PublicKey 推导失败，原始输出如下："
+  echo "$PUB_OUT"
+  exit 1
+fi
+
+echo "  ✔ PublicKey 已生成"
 
 echo "▶ 写入 Xray 配置文件..."
-
 mkdir -p /usr/local/etc/xray
 
-cat > ${XRAY_CONFIG} <<EOF
+cat > "${XRAY_CONFIG}" <<EOF
 {
   "log": {
     "loglevel": "warning"
@@ -91,7 +104,7 @@ sleep 1
 
 echo
 echo "================= 部署完成 ================="
-echo "VLESS + REALITY 信息："
+echo "VLESS + REALITY 参数如下："
 echo
 echo "地址        : <你的服务器IP>"
 echo "端口        : ${PORT}"
