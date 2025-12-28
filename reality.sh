@@ -37,15 +37,16 @@ cat > "$XRAY_CONFIG" <<EOF
   "log": {
     "loglevel": "warning"
   },
+
   "inbounds": [
     {
-      "port": ${PORT},
+      "port": 30191,
       "listen": "::",
       "protocol": "vless",
       "settings": {
         "clients": [
           {
-            "id": "${UUID}",
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
             "flow": "xtls-rprx-vision"
           }
         ],
@@ -56,21 +57,52 @@ cat > "$XRAY_CONFIG" <<EOF
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "${SNI}:443",
+          "dest": "www.bing.com:443",
           "xver": 0,
-          "serverNames": ["${SNI}"],
-          "privateKey": "${PRIVATE_KEY}",
-          "shortIds": ["${SHORT_ID}"]
+          "serverNames": ["www.bing.com"],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": ["50dcc34c59ea05a4"]
         }
       }
     }
   ],
+
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "source": ["geoip:ipv4"],
+        "outboundTag": "out-v4"
+      },
+      {
+        "type": "field",
+        "source": ["geoip:ipv6"],
+        "outboundTag": "out-v6"
+      }
+    ]
+  },
+
   "outbounds": [
     {
-      "protocol": "freedom"
+      "tag": "out-v4",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      },
+      "sendThrough": "0.0.0.0"
+    },
+    {
+      "tag": "out-v6",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv6"
+      },
+      "sendThrough": "::"
     }
   ]
 }
+
 EOF
 
 # ================== 启动服务 ==================
