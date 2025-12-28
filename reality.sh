@@ -16,31 +16,31 @@ bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/insta
 
 XRAY_BIN=$(command -v xray)
 if [[ -z "$XRAY_BIN" ]]; then
-  echo "❌ 未找到 xray 可执行文件"
+  echo "❌ 未找到 xray"
   exit 1
 fi
 
 echo "▶ 生成 REALITY PrivateKey..."
-KEYS="$(${XRAY_BIN} x25519)"
+RAW_OUT="$(${XRAY_BIN} x25519)"
 
-# ⭐ 核心修复点：稳健解析 PrivateKey
-PRIVATE_KEY=$(echo "$KEYS" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
+PRIVATE_KEY=$(echo "$RAW_OUT" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
 
 if [[ -z "$PRIVATE_KEY" ]]; then
-  echo "❌ PrivateKey 解析失败，原始输出如下："
-  echo "$KEYS"
+  echo "❌ PrivateKey 解析失败"
+  echo "$RAW_OUT"
   exit 1
 fi
 
 echo "  ✔ PrivateKey = $PRIVATE_KEY"
 
-echo "▶ 由 PrivateKey 推导 PublicKey..."
-PUB_OUT="$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY")"
-PUBLIC_KEY=$(echo "$PUB_OUT" | grep '^Public key:' | awk -F: '{print $2}' | xargs)
+echo "▶ 使用 std-encoding 推导 PublicKey..."
+STD_OUT="$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY" --std-encoding)"
+
+PUBLIC_KEY=$(echo "$STD_OUT" | grep '^Public key:' | awk -F: '{print $2}' | xargs)
 
 if [[ -z "$PUBLIC_KEY" ]]; then
-  echo "❌ PublicKey 推导失败，原始输出如下："
-  echo "$PUB_OUT"
+  echo "❌ PublicKey 推导失败（std-encoding）"
+  echo "$STD_OUT"
   exit 1
 fi
 
