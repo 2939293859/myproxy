@@ -40,7 +40,6 @@ cat > "$XRAY_CONFIG" <<EOF
 
   "inbounds": [
     {
-      "tag": "vless-in",
       "port": 30191,
       "listen": "::",
       "protocol": "vless",
@@ -58,9 +57,13 @@ cat > "$XRAY_CONFIG" <<EOF
         "security": "reality",
         "realitySettings": {
           "dest": "www.bing.com:443",
-          "serverNames": ["www.bing.com"],
+          "serverNames": [
+            "www.bing.com"
+          ],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "shortIds": ["50dcc34c59ea05a4"]
+          "shortIds": [
+            "50dcc34c59ea05a4"
+          ]
         }
       }
     }
@@ -68,38 +71,12 @@ cat > "$XRAY_CONFIG" <<EOF
 
   "outbounds": [
     {
-      "tag": "out-ipv4",
       "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv4"
-      }
-    },
-    {
-      "tag": "out-ipv6",
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv6"
-      }
+      "settings": {}
     }
-  ],
-
-  "routing": {
-    "rules": [
-      {
-        "type": "field",
-        "inboundTag": ["vless-in"],
-        "mark": 1,
-        "outboundTag": "out-ipv4"
-      },
-      {
-        "type": "field",
-        "inboundTag": ["vless-in"],
-        "mark": 2,
-        "outboundTag": "out-ipv6"
-      }
-    ]
-  }
+  ]
 }
+
 
 
 
