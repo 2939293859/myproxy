@@ -21,7 +21,7 @@ OUT="$(${XRAY_BIN} x25519)"
 
 # 使用 awk 直接提取字段值，避免 xargs 和空格问题
 PRIVATE_KEY=$(echo "$OUT" | awk '/^PrivateKey:/ {print $2}')
-PUBLIC_KEY=$(echo "$OUT" | awk '/^Hash32:/     {print $2}')
+PUBLIC_KEY=$(echo "$OUT" | awk '/^Password:/   {print $2}')
 
 if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
   echo "❌ REALITY 密钥解析失败"
