@@ -39,33 +39,62 @@ cat > "$XRAY_CONFIG" <<EOF
   },
 
   "inbounds": [
-    {
-      "port": 30191,
-      "listen": "::",
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          {
-            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "xtls-rprx-vision"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "www.bing.com:443",
-          "xver": 0,
-          "serverNames": ["www.bing.com"],
-          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "shortIds": ["50dcc34c59ea05a4"]
+  {
+    "tag": "in-v4",
+    "port": 30191,
+    "listen": "0.0.0.0",
+    "protocol": "vless",
+    "settings": {
+      "clients": [
+        {
+          "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+          "flow": "xtls-rprx-vision"
         }
+      ],
+      "decryption": "none"
+    },
+    "streamSettings": {
+      "network": "tcp",
+      "security": "reality",
+      "realitySettings": {
+        "show": false,
+        "dest": "www.bing.com:443",
+        "xver": 0,
+        "serverNames": ["www.bing.com"],
+        "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+        "shortIds": ["50dcc34c59ea05a4"]
       }
     }
-  ],
+  },
+  {
+    "tag": "in-v6",
+    "port": 30191,
+    "listen": "::",
+    "protocol": "vless",
+    "settings": {
+      "clients": [
+        {
+          "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "decryption": "none"
+    },
+    "streamSettings": {
+      "network": "tcp",
+      "security": "reality",
+      "realitySettings": {
+        "show": false,
+        "dest": "www.bing.com:443",
+        "xver": 0,
+        "serverNames": ["www.bing.com"],
+        "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+        "shortIds": ["50dcc34c59ea05a4"]
+      }
+    }
+  }
+]
+
 
   "routing": {
     "domainStrategy": "AsIs",
