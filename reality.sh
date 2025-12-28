@@ -19,17 +19,19 @@ XRAY_BIN=$(command -v xray)
 echo "▶ 生成 REALITY 密钥..."
 OUT="$(${XRAY_BIN} x25519)"
 
-PRIVATE_KEY=$(echo "$OUT" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
-PUBLIC_KEY=$(echo "$OUT" | grep '^Hash32:'    | awk -F: '{print $2}' | xargs)
+# 使用 awk 直接提取字段值，避免 xargs 和空格问题
+PRIVATE_KEY=$(echo "$OUT" | awk '/^PrivateKey:/ {print $2}')
+PUBLIC_KEY=$(echo "$OUT" | awk '/^Hash32:/     {print $2}')
 
 if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
   echo "❌ REALITY 密钥解析失败"
+  echo "原始输出："
   echo "$OUT"
   exit 1
 fi
 
 echo "  ✔ PrivateKey = $PRIVATE_KEY"
-echo "  ✔ PublicKey  = $PUBLIC_KEY (Hash32)"
+echo "  ✔ PublicKey (Hash32) = $PUBLIC_KEY"
 
 mkdir -p /usr/local/etc/xray
 
