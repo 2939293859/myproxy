@@ -62,7 +62,7 @@ cat > "$XRAY_CONFIG" <<EOF
           "xver": 0,
           "serverNames": ["${SNI}"],
           "privateKey": "${PRIVATE_KEY}",
-          "shortIds": [""]
+          "shortIds": ["6ba8e4"]
         }
       }
     }
