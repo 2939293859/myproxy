@@ -7,19 +7,34 @@ UUID="3a734d50-8ad6-4f05-b089-fb7662d7990d"
 SNI="www.microsoft.com"
 XRAY_CONFIG="/usr/local/etc/xray/config.json"
 
-echo "▶ 安装依赖..."
-apt update
+echo "▶ 更新系统 & 安装依赖..."
+apt update -y
 apt install -y curl unzip jq openssl
 
-echo "▶ 安装 Xray..."
+echo "▶ 安装 Xray-core..."
 bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 
-echo "▶ 生成 REALITY 密钥..."
-KEYS=$(xray x25519)
-PRIVATE_KEY=$(echo "$KEYS" | awk '/Private key/ {print $3}')
-PUBLIC_KEY=$(echo "$KEYS" | awk '/Public key/ {print $3}')
+# 确保 xray 在 PATH 中
+XRAY_BIN=$(command -v xray)
 
-echo "▶ 写入 Xray 配置..."
+echo "▶ 生成 REALITY 密钥对..."
+KEYS=$(${XRAY_BIN} x25519)
+
+PRIVATE_KEY=$(echo "$KEYS" | sed -n 's/^Private key: //p')
+PUBLIC_KEY=$(echo "$KEYS" | sed -n 's/^Public key: //p')
+
+if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
+  echo "❌ REALITY 密钥生成失败"
+  echo "$KEYS"
+  exit 1
+fi
+
+echo "  ✔ Private Key 已生成"
+echo "  ✔ Public  Key 已生成"
+
+echo "▶ 写入 Xray 配置文件..."
+
+mkdir -p /usr/local/etc/xray
 
 cat > ${XRAY_CONFIG} <<EOF
 {
@@ -67,10 +82,12 @@ cat > ${XRAY_CONFIG} <<EOF
 }
 EOF
 
-echo "▶ 重启 Xray..."
+echo "▶ 启动并设置 Xray 开机自启..."
 systemctl daemon-reexec
 systemctl enable xray
 systemctl restart xray
+
+sleep 1
 
 echo
 echo "================= 部署完成 ================="
