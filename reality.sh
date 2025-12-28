@@ -15,28 +15,28 @@ echo "▶ 安装 / 更新 Xray-core..."
 bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 
 XRAY_BIN=$(command -v xray)
-
 if [[ -z "$XRAY_BIN" ]]; then
   echo "❌ 未找到 xray 可执行文件"
   exit 1
 fi
 
 echo "▶ 生成 REALITY PrivateKey..."
-KEYS=$(${XRAY_BIN} x25519)
+KEYS="$(${XRAY_BIN} x25519)"
 
-PRIVATE_KEY=$(echo "$KEYS" | sed -n 's/^PrivateKey: *//p')
+# ⭐ 核心修复点：稳健解析 PrivateKey
+PRIVATE_KEY=$(echo "$KEYS" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
 
 if [[ -z "$PRIVATE_KEY" ]]; then
-  echo "❌ PrivateKey 生成失败，原始输出如下："
+  echo "❌ PrivateKey 解析失败，原始输出如下："
   echo "$KEYS"
   exit 1
 fi
 
-echo "  ✔ PrivateKey 已生成"
+echo "  ✔ PrivateKey = $PRIVATE_KEY"
 
 echo "▶ 由 PrivateKey 推导 PublicKey..."
-PUB_OUT=$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY")
-PUBLIC_KEY=$(echo "$PUB_OUT" | sed -n 's/^Public key: *//p')
+PUB_OUT="$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY")"
+PUBLIC_KEY=$(echo "$PUB_OUT" | grep '^Public key:' | awk -F: '{print $2}' | xargs)
 
 if [[ -z "$PUBLIC_KEY" ]]; then
   echo "❌ PublicKey 推导失败，原始输出如下："
@@ -44,16 +44,14 @@ if [[ -z "$PUBLIC_KEY" ]]; then
   exit 1
 fi
 
-echo "  ✔ PublicKey 已生成"
+echo "  ✔ PublicKey  = $PUBLIC_KEY"
 
 echo "▶ 写入 Xray 配置文件..."
 mkdir -p /usr/local/etc/xray
 
-cat > "${XRAY_CONFIG}" <<EOF
+cat > "$XRAY_CONFIG" <<EOF
 {
-  "log": {
-    "loglevel": "warning"
-  },
+  "log": { "loglevel": "warning" },
   "inbounds": [
     {
       "port": ${PORT},
@@ -75,45 +73,30 @@ cat > "${XRAY_CONFIG}" <<EOF
           "show": false,
           "dest": "${SNI}:443",
           "xver": 0,
-          "serverNames": [
-            "${SNI}"
-          ],
+          "serverNames": ["${SNI}"],
           "privateKey": "${PRIVATE_KEY}",
-          "shortIds": [
-            ""
-          ]
+          "shortIds": [""]
         }
       }
     }
   ],
   "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {}
-    }
+    { "protocol": "freedom" }
   ]
 }
 EOF
 
-echo "▶ 启动并设置 Xray 开机自启..."
+echo "▶ 启动 Xray..."
 systemctl daemon-reexec
 systemctl enable xray
 systemctl restart xray
 
-sleep 1
-
 echo
 echo "================= 部署完成 ================="
-echo "VLESS + REALITY 参数如下："
-echo
 echo "地址        : <你的服务器IP>"
 echo "端口        : ${PORT}"
 echo "UUID        : ${UUID}"
-echo "加密        : none"
-echo "传输协议    : tcp"
-echo "安全        : reality"
 echo "SNI         : ${SNI}"
 echo "Public Key  : ${PUBLIC_KEY}"
 echo "Flow        : xtls-rprx-vision"
-echo
 echo "============================================"
