@@ -3,7 +3,7 @@ set -e
 
 PORT=30191
 UUID="3a734d50-8ad6-4f05-b089-fb7662d7990d"
-SNI="www.microsoft.com"
+SNI="www.bing.com"
 XRAY_CONFIG="/usr/local/etc/xray/config.json"
 
 echo "▶ 更新系统 & 安装依赖..."
