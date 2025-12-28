@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-# ================== 基础参数 ==================
 PORT=30191
 UUID="3a734d50-8ad6-4f05-b089-fb7662d7990d"
 SNI="www.microsoft.com"
@@ -15,40 +14,26 @@ echo "▶ 安装 / 更新 Xray-core..."
 bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 
 XRAY_BIN=$(command -v xray)
-if [[ -z "$XRAY_BIN" ]]; then
-  echo "❌ 未找到 xray"
-  exit 1
-fi
+[[ -z "$XRAY_BIN" ]] && { echo "❌ 未找到 xray"; exit 1; }
 
-echo "▶ 生成 REALITY PrivateKey..."
-RAW_OUT="$(${XRAY_BIN} x25519)"
+echo "▶ 生成 REALITY 密钥..."
+OUT="$(${XRAY_BIN} x25519)"
 
-PRIVATE_KEY=$(echo "$RAW_OUT" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
+PRIVATE_KEY=$(echo "$OUT" | grep '^PrivateKey:' | awk -F: '{print $2}' | xargs)
+PUBLIC_KEY=$(echo "$OUT" | grep '^Hash32:'    | awk -F: '{print $2}' | xargs)
 
-if [[ -z "$PRIVATE_KEY" ]]; then
-  echo "❌ PrivateKey 解析失败"
-  echo "$RAW_OUT"
+if [[ -z "$PRIVATE_KEY" || -z "$PUBLIC_KEY" ]]; then
+  echo "❌ REALITY 密钥解析失败"
+  echo "$OUT"
   exit 1
 fi
 
 echo "  ✔ PrivateKey = $PRIVATE_KEY"
+echo "  ✔ PublicKey  = $PUBLIC_KEY (Hash32)"
 
-echo "▶ 使用 std-encoding 推导 PublicKey..."
-STD_OUT="$(${XRAY_BIN} x25519 -i "$PRIVATE_KEY" --std-encoding)"
-
-PUBLIC_KEY=$(echo "$STD_OUT" | grep '^Public key:' | awk -F: '{print $2}' | xargs)
-
-if [[ -z "$PUBLIC_KEY" ]]; then
-  echo "❌ PublicKey 推导失败（std-encoding）"
-  echo "$STD_OUT"
-  exit 1
-fi
-
-echo "  ✔ PublicKey  = $PUBLIC_KEY"
-
-echo "▶ 写入 Xray 配置文件..."
 mkdir -p /usr/local/etc/xray
 
+echo "▶ 写入 Xray 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 {
   "log": { "loglevel": "warning" },
