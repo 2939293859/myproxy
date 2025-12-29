@@ -34,121 +34,33 @@ mkdir -p /usr/local/etc/xray
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 {
-  "log": {
-    "loglevel": "info"
-  },
-  "dns": {
-    "disableFallback": true,
-    "disableFallbackIfMatch": true,
-    "servers": [
-      "https://1.1.1.1/dns-query"
-    ],
-    "tag": "dns-out"
-  },
-  "inbounds": [
-    {
-      "port": 30191,
-      "listen": "0.0.0.0",
-      "protocol": "vless",
-      "tag": "in-v4",
-      "settings": {
-        "clients": [
-          {
-            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "xtls-rprx-vision"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "dest": "www.bing.com:443",
-          "serverNames": ["www.bing.com"],
-          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "shortIds": ["50dcc34c59ea05a4"]
-        }
-      }
+  "log": { "loglevel": "info" },
+  "inbounds": [{
+    "port": 30191,
+    "listen": "0.0.0.0",
+    "protocol": "vless",
+    "settings": {
+      "clients": [{ "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d", "flow": "xtls-rprx-vision" }],
+      "decryption": "none"
     },
-    {
-      "port": 30192,
-      "listen": "::",
-      "protocol": "vless",
-      "tag": "in-v6",
-      "settings": {
-        "clients": [
-          {
-            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "xtls-rprx-vision"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "dest": "www.bing.com:443",
-          "serverNames": ["www.bing.com"],
-          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "shortIds": ["50dcc34c59ea05a4"]
-        }
+    "streamSettings": {
+      "network": "tcp",
+      "security": "reality",
+      "realitySettings": {
+        "dest": "www.bing.com:443",
+        "serverNames": ["www.bing.com"],
+        "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+        "shortIds": ["50dcc34c59ea05a4"]
       }
     }
-  ],
-  "outbounds": [
-    {
-      "tag": "ipv4-out",
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv4"
-      },
-      "streamSettings": {
-        "sockopt": {
-          "tcp4": true
-        }
-      }
-    },
-    {
-      "tag": "ipv6-out",
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv6"
-      },
-      "streamSettings": {
-        "sockopt": {
-          "tcp6": true
-        }
-      }
-    },
-    {
-      "tag": "dns-out",
-      "protocol": "dns"
+  }],
+  "outbounds": [{
+    "protocol": "freedom",
+    "streamSettings": {
+      "sockopt": { "tcp4": true }
     }
-  ],
-  "routing": {
-    "domainStrategy": "AsIs",
-    "rules": [
-      {
-        "type": "field",
-        "inboundTag": ["in-v4"],
-        "outboundTag": "ipv4-out"
-      },
-      {
-        "type": "field",
-        "inboundTag": ["in-v6"],
-        "outboundTag": "ipv6-out"
-      },
-      {
-        "type": "field",
-        "domain": ["www.bing.com"],
-        "outboundTag": "ipv4-out"
-      }
-    ]
-  }
+  }]
 }
-
 
 
 
