@@ -64,7 +64,7 @@ cat > "$XRAY_CONFIG" <<EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "dest": "www.bing.com:443",
+          "dest": "204.79.197.200:443",
           "serverNames": ["www.bing.com"],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
           "shortIds": ["50dcc34c59ea05a4"]
@@ -89,7 +89,7 @@ cat > "$XRAY_CONFIG" <<EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "dest": "www.bing.com:443",
+          "dest": "204.79.197.200:443",
           "serverNames": ["www.bing.com"],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
           "shortIds": ["50dcc34c59ea05a4"]
@@ -114,7 +114,8 @@ cat > "$XRAY_CONFIG" <<EOF
     },
     {
       "tag": "dns-out",
-      "protocol": "dns"
+      "protocol": "dns",
+      "settings": {}
     }
   ],
   "routing": {
