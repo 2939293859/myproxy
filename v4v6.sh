@@ -34,9 +34,6 @@ mkdir -p /usr/local/etc/xray
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 服务器是双栈的ubuntu系统，客户端是windows系统。现在要使用vless搭建代理，IPV4和IPV6之间互相隔离。当客户端使用ipv4的地址连接时，服务端只使用ipv4做为出口，当客户端使用ipv6的地址连接时，服务端只使用ipv6做为出口。不管是客户端还是服务端ipv4和ipv6之间要完全隔离。
-
-
-
 {
   "log": {
     "loglevel": "warning",
@@ -207,11 +204,6 @@ cat > "$XRAY_CONFIG" <<EOF
     }
   }
 }
-
-
-
-
-
 EOF
 
 # ================== 启动服务 ==================
