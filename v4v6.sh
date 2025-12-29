@@ -103,6 +103,11 @@ cat > "$XRAY_CONFIG" <<EOF
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tcp4": true
+        }
       }
     },
     {
@@ -110,12 +115,16 @@ cat > "$XRAY_CONFIG" <<EOF
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv6"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tcp6": true
+        }
       }
     },
     {
       "tag": "dns-out",
-      "protocol": "dns",
-      "settings": {}
+      "protocol": "dns"
     }
   ],
   "routing": {
