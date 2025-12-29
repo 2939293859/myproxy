@@ -33,39 +33,29 @@ mkdir -p /usr/local/etc/xray
 # ================== 写入配置 ==================
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
+服务器是双栈的ubuntu系统，客户端是windows系统。现在要使用vless搭建代理，IPV4和IPV6之间互相隔离。当客户端使用ipv4的地址连接时，服务端只使用ipv4做为出口，当客户端使用ipv6的地址连接时，服务端只使用ipv6做为出口。不管是客户端还是服务端ipv4和ipv6之间要完全隔离。
+
+
+
 {
   "log": {
-    "loglevel": "info"
+    "loglevel": "warning",
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log"
   },
-
-  "dns": {
-    "disableFallback": true,
-    "disableFallbackIfMatch": true,
-    "servers": [
-      {
-        "tag": "dns-v4",
-        "address": "https://1.1.1.1/dns-query",
-        "queryStrategy": "UseIPv4"
-      },
-      {
-        "tag": "dns-v6",
-        "address": "https://[2606:4700:4700::1111]/dns-query",
-        "queryStrategy": "UseIPv6"
-      }
-    ]
-  },
-
   "inbounds": [
     {
-      "port": 30191,
-      "listen": "0.0.0.0",
+      "port": 443,
       "protocol": "vless",
-      "tag": "in-v4",
+      "listen": "0.0.0.0",
+      "tag": "inbound-ipv4",
       "settings": {
         "clients": [
           {
             "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "xtls-rprx-vision"
+            "flow": "",
+            "level": 0,
+            "email": "ipv4_user@example.com"
           }
         ],
         "decryption": "none"
@@ -74,28 +64,41 @@ cat > "$XRAY_CONFIG" <<EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "dest": "204.79.197.200:443",
+          "show": false,
+          "dest": "www.bing.com:443",
+          "xver": 0,
           "serverNames": [
             "www.bing.com"
           ],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "minClientVer": "",
+          "maxClientVer": "",
+          "maxTimeDiff": 0,
           "shortIds": [
             "50dcc34c59ea05a4"
           ]
         }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
       }
     },
-
     {
-      "port": 30192,
-      "listen": "::",
+      "port": 8443,
       "protocol": "vless",
-      "tag": "in-v6",
+      "listen": "::",
+      "tag": "inbound-ipv6",
       "settings": {
         "clients": [
           {
             "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "xtls-rprx-vision"
+            "flow": "",
+            "level": 0,
+            "email": "ipv6_user@example.com"
           }
         ],
         "decryption": "none"
@@ -104,70 +107,104 @@ cat > "$XRAY_CONFIG" <<EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "dest": "[2620:1ec:bdf::35]:443",
+          "show": false,
+          "dest": "www.bing.com:443",
+          "xver": 0,
           "serverNames": [
             "www.bing.com"
           ],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "minClientVer": "",
+          "maxClientVer": "",
+          "maxTimeDiff": 0,
           "shortIds": [
             "50dcc34c59ea05a4"
           ]
         }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
       }
     }
   ],
-
   "outbounds": [
     {
-      "tag": "ipv4-out",
       "protocol": "freedom",
+      "tag": "outbound-ipv4",
       "settings": {
         "domainStrategy": "UseIPv4"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "mark": 100
+        }
       }
     },
     {
-      "tag": "ipv6-out",
       "protocol": "freedom",
+      "tag": "outbound-ipv6",
       "settings": {
         "domainStrategy": "UseIPv6"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "mark": 200
+        }
       }
     },
     {
-      "tag": "dns-v4",
-      "protocol": "dns"
-    },
-    {
-      "tag": "dns-v6",
-      "protocol": "dns"
+      "protocol": "blackhole",
+      "tag": "blocked"
     }
   ],
-
   "routing": {
     "domainStrategy": "AsIs",
     "rules": [
       {
         "type": "field",
-        "inboundTag": ["in-v4"],
-        "outboundTag": "ipv4-out"
+        "inboundTag": [
+          "inbound-ipv4"
+        ],
+        "outboundTag": "outbound-ipv4"
       },
       {
         "type": "field",
-        "inboundTag": ["in-v6"],
-        "outboundTag": "ipv6-out"
+        "inboundTag": [
+          "inbound-ipv6"
+        ],
+        "outboundTag": "outbound-ipv6"
       },
       {
         "type": "field",
-        "inboundTag": ["in-v4"],
-        "outboundTag": "dns-v4",
-        "network": "udp"
-      },
-      {
-        "type": "field",
-        "inboundTag": ["in-v6"],
-        "outboundTag": "dns-v6",
-        "network": "udp"
+        "protocol": [
+          "bittorrent"
+        ],
+        "outboundTag": "blocked"
       }
     ]
+  },
+  "policy": {
+    "levels": {
+      "0": {
+        "handshake": 4,
+        "connIdle": 300,
+        "uplinkOnly": 2,
+        "downlinkOnly": 5,
+        "statsUserUplink": false,
+        "statsUserDownlink": false,
+        "bufferSize": 10240
+      }
+    },
+    "system": {
+      "statsInboundUplink": false,
+      "statsInboundDownlink": false,
+      "statsOutboundUplink": false,
+      "statsOutboundDownlink": false
+    }
   }
 }
 
