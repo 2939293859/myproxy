@@ -34,38 +34,61 @@ mkdir -p /usr/local/etc/xray
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 {
-  "log": { "loglevel": "warning" },
+  "log": {
+    "loglevel": "warning"
+  },
   "dns": {
-    "hosts": {
-      // 可选：固定某些域名解析
-    },
     "servers": [
-      // 使用支持 IPv4 和 IPv6 的可靠 DNS
       {
         "address": "https://1.1.1.1/dns-query",
-        "domains": ["geosite:cn", "geosite:category-ads-all"],
-        "expectIPs": ["geoip:private", "geoip:cn"]
+        "port": 443,
+        "domains": ["geosite:category-ads-all"]
       },
       {
-        "address": "8.8.8.8",
-        "port": 53,
-        "domains": ["geosite:geolocation-!cn"]
-      },
-      {
-        "address": "2001:4860:4860::8888", // Google IPv6 DNS
-        "port": 53,
-        "domains": ["geosite:geolocation-!cn"]
+        "address": "https://1.1.1.1/dns-query",
+        "port": 443
       }
     ],
     "tag": "dns-out"
   },
-  "inbounds": [ /* 你的 inbounds 保持不变 */ ],
+  "inbounds": [
+    {
+      "port": 30191,
+      "listen": "::",
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "dest": "www.bing.com:443",
+          "serverNames": ["www.bing.com"],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": ["50dcc34c59ea05a4"]
+        }
+      }
+    }
+  ],
   "outbounds": [
     {
       "tag": "ipv4-out",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tcpKeepAliveIdle": 100,
+          "mark": 255
+        }
       }
     },
     {
@@ -73,6 +96,12 @@ cat > "$XRAY_CONFIG" <<EOF
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv6"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tcpKeepAliveIdle": 100,
+          "mark": 255
+        }
       }
     },
     {
@@ -82,15 +111,8 @@ cat > "$XRAY_CONFIG" <<EOF
     }
   ],
   "routing": {
-    "domainStrategy": "AsIs", // 全局默认不干预，由规则决定
+    "domainStrategy": "AsIs",
     "rules": [
-      // DNS 查询走专用 outbound
-      {
-        "type": "field",
-        "inboundTag": ["dns-in"], // 如果有 dns-in 才需要；否则可省略
-        "outboundTag": "dns-out"
-      },
-      // 按源 IP 类型路由
       {
         "type": "field",
         "source": ["::/0"],
