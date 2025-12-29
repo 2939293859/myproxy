@@ -78,7 +78,7 @@ cat > "$XRAY_CONFIG" <<EOF
           "serverNames": [
             "www.bing.com"
           ],
-          "privateKey": "你的_PRIVATE_KEY",
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
           "shortIds": [
             "50dcc34c59ea05a4"
           ]
@@ -108,7 +108,7 @@ cat > "$XRAY_CONFIG" <<EOF
           "serverNames": [
             "www.bing.com"
           ],
-          "privateKey": "你的_PRIVATE_KEY",
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
           "shortIds": [
             "50dcc34c59ea05a4"
           ]
