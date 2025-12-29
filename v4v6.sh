@@ -33,7 +33,6 @@ mkdir -p /usr/local/etc/xray
 # ================== 写入配置 ==================
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
-服务器是双栈的ubuntu系统，客户端是windows系统。现在要使用vless搭建代理，IPV4和IPV6之间互相隔离。当客户端使用ipv4的地址连接时，服务端只使用ipv4做为出口，当客户端使用ipv6的地址连接时，服务端只使用ipv6做为出口。不管是客户端还是服务端ipv4和ipv6之间要完全隔离。
 {
   "log": {
     "loglevel": "warning",
@@ -137,7 +136,8 @@ cat > "$XRAY_CONFIG" <<EOF
       },
       "streamSettings": {
         "sockopt": {
-          "mark": 100
+          "mark": 100,
+          "tcpFastOpen": true
         }
       }
     },
@@ -149,9 +149,18 @@ cat > "$XRAY_CONFIG" <<EOF
       },
       "streamSettings": {
         "sockopt": {
-          "mark": 200
+          "mark": 200,
+          "tcpFastOpen": true
         }
       }
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block-ipv6-on-ipv4"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block-ipv4-on-ipv6"
     },
     {
       "protocol": "blackhole",
@@ -159,14 +168,34 @@ cat > "$XRAY_CONFIG" <<EOF
     }
   ],
   "routing": {
-    "domainStrategy": "AsIs",
+    "domainStrategy": "IPIfNonMatch",
     "rules": [
       {
         "type": "field",
         "inboundTag": [
           "inbound-ipv4"
         ],
+        "ip": [
+          "::/0"
+        ],
+        "outboundTag": "block-ipv6-on-ipv4"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "inbound-ipv4"
+        ],
         "outboundTag": "outbound-ipv4"
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "inbound-ipv6"
+        ],
+        "ip": [
+          "0.0.0.0/0"
+        ],
+        "outboundTag": "block-ipv4-on-ipv6"
       },
       {
         "type": "field",
