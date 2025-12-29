@@ -38,18 +38,19 @@ cat > "$XRAY_CONFIG" <<EOF
     "loglevel": "info"
   },
   "dns": {
+    "disableFallback": true,
+    "disableFallbackIfMatch": true,
     "servers": [
       "https://1.1.1.1/dns-query"
     ],
     "tag": "dns-out"
   },
   "inbounds": [
-    // IPv4 only inbound
     {
       "port": 30191,
       "listen": "0.0.0.0",
       "protocol": "vless",
-      "tag": "in-v4",   // 👈 关键：打标签
+      "tag": "in-v4",
       "settings": {
         "clients": [
           {
@@ -70,9 +71,8 @@ cat > "$XRAY_CONFIG" <<EOF
         }
       }
     },
-    // IPv6 only inbound
     {
-      "port": 30192,  // 👈 注意：必须换端口！Linux 不允许同端口同时 bind 0.0.0.0 和 ::（除非 SO_REUSEPORT）
+      "port": 30192,
       "listen": "::",
       "protocol": "vless",
       "tag": "in-v6",
@@ -118,6 +118,7 @@ cat > "$XRAY_CONFIG" <<EOF
     }
   ],
   "routing": {
+    "domainStrategy": "AsIs",
     "rules": [
       {
         "type": "field",
