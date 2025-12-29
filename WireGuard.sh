@@ -30,7 +30,7 @@ echo ">>> 写入 wg0 (IPv6)..."
 cat >/etc/wireguard/wg0.conf <<EOF
 [Interface]
 Address = fd42:42:42::1/64
-ListenPort = 51820
+ListenPort = 26313
 PrivateKey = mB73Nm54cPeZuQX9NKrY7LNWcT57yVsqr5UplNGKHVQ=
 
 PostUp   = ip6tables -A FORWARD -i wg0 -j ACCEPT
@@ -53,7 +53,7 @@ echo ">>> 写入 wg1 (IPv4)..."
 cat >/etc/wireguard/wg1.conf <<EOF
 [Interface]
 Address = 10.10.10.1/24
-ListenPort = 51821
+ListenPort = 47527
 PrivateKey = mB73Nm54cPeZuQX9NKrY7LNWcT57yVsqr5UplNGKHVQ=
 
 PostUp   = iptables -A FORWARD -i wg1 -j ACCEPT
