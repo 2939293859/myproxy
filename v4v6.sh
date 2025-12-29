@@ -35,32 +35,21 @@ echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 {
   "log": {
-    "loglevel": "warning"
+    "loglevel": "info"
   },
-
   "dns": {
     "servers": [
-      {
-        "tag": "dns-v4",
-        "address": "8.8.8.8",
-        "domains": ["geosite:geolocation-!cn"],
-        "expectIPs": ["geoip:!cn"]
-      },
-      {
-        "tag": "dns-v6",
-        "address": "2001:4860:4860::8888",
-        "domains": ["geosite:geolocation-!cn"],
-        "expectIPs": ["geoip:!cn"]
-      }
-    ]
+      "https://1.1.1.1/dns-query"
+    ],
+    "tag": "dns-out"
   },
-
   "inbounds": [
+    // IPv4 only inbound
     {
-      "tag": "in-v4",
       "port": 30191,
       "listen": "0.0.0.0",
       "protocol": "vless",
+      "tag": "in-v4",   // 👈 关键：打标签
       "settings": {
         "clients": [
           {
@@ -81,11 +70,12 @@ cat > "$XRAY_CONFIG" <<EOF
         }
       }
     },
+    // IPv6 only inbound
     {
-      "tag": "in-v6",
-      "port": 30191,
+      "port": 30192,  // 👈 注意：必须换端口！Linux 不允许同端口同时 bind 0.0.0.0 和 ::（除非 SO_REUSEPORT）
       "listen": "::",
       "protocol": "vless",
+      "tag": "in-v6",
       "settings": {
         "clients": [
           {
@@ -107,42 +97,37 @@ cat > "$XRAY_CONFIG" <<EOF
       }
     }
   ],
-
   "outbounds": [
     {
-      "tag": "out-v4",
+      "tag": "ipv4-out",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
-      },
-      "sendThrough": "23.27.120.248"
+      }
     },
     {
-      "tag": "out-v6",
+      "tag": "ipv6-out",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv6"
-      },
-      "sendThrough": "2400:8d60:0002:0000:0000:0001:4f08:bd65"
+      }
     },
     {
-      "tag": "block",
-      "protocol": "blackhole"
+      "tag": "dns-out",
+      "protocol": "dns"
     }
   ],
-
   "routing": {
-    "domainStrategy": "IPIfNonMatch",
     "rules": [
       {
         "type": "field",
         "inboundTag": ["in-v4"],
-        "outboundTag": "out-v4"
+        "outboundTag": "ipv4-out"
       },
       {
         "type": "field",
         "inboundTag": ["in-v6"],
-        "outboundTag": "out-v6"
+        "outboundTag": "ipv6-out"
       }
     ]
   }
