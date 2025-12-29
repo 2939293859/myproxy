@@ -167,24 +167,37 @@ cat > "$XRAY_CONFIG" <<EOF
       "tag": "blocked"
     }
   ],
+  "dns": {
+    "servers": [
+      {
+        "address": "1.1.1.1",
+        "port": 53,
+        "domains": [],
+        "expectIPs": [],
+        "queryStrategy": "UseIPv4"
+      },
+      {
+        "address": "2606:4700:4700::1111",
+        "port": 53,
+        "domains": [],
+        "expectIPs": [],
+        "queryStrategy": "UseIPv6"
+      }
+    ],
+    "queryStrategy": "UseIP",
+    "disableCache": false,
+    "disableFallback": true,
+    "tag": "dns_inbound"
+  },
   "routing": {
-    "domainStrategy": "IPIfNonMatch",
+    "domainStrategy": "IPOnDemand",
     "rules": [
       {
         "type": "field",
         "inboundTag": [
           "inbound-ipv4"
         ],
-        "ip": [
-          "::/0"
-        ],
-        "outboundTag": "block-ipv6-on-ipv4"
-      },
-      {
-        "type": "field",
-        "inboundTag": [
-          "inbound-ipv4"
-        ],
+        "network": "tcp,udp",
         "outboundTag": "outbound-ipv4"
       },
       {
@@ -192,16 +205,7 @@ cat > "$XRAY_CONFIG" <<EOF
         "inboundTag": [
           "inbound-ipv6"
         ],
-        "ip": [
-          "0.0.0.0/0"
-        ],
-        "outboundTag": "block-ipv4-on-ipv6"
-      },
-      {
-        "type": "field",
-        "inboundTag": [
-          "inbound-ipv6"
-        ],
+        "network": "tcp,udp",
         "outboundTag": "outbound-ipv6"
       },
       {
