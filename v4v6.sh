@@ -208,6 +208,7 @@ EOF
 
 # ================== 启动服务 ==================
 echo "▶ 启动 Xray..."
+sed -i '1s/^\xEF\xBB\xBF//' /usr/local/etc/xray/config.json
 systemctl daemon-reexec
 systemctl enable xray
 systemctl restart xray
