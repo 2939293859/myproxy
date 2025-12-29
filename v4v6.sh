@@ -37,22 +37,52 @@ cat > "$XRAY_CONFIG" <<EOF
   "log": {
     "loglevel": "warning"
   },
+
   "dns": {
     "servers": [
       {
-        "address": "https://1.1.1.1/dns-query",
-        "port": 443,
-        "domains": ["geosite:category-ads-all"]
+        "tag": "dns-v4",
+        "address": "8.8.8.8",
+        "domains": ["geosite:geolocation-!cn"],
+        "expectIPs": ["geoip:!cn"]
       },
       {
-        "address": "https://1.1.1.1/dns-query",
-        "port": 443
+        "tag": "dns-v6",
+        "address": "2001:4860:4860::8888",
+        "domains": ["geosite:geolocation-!cn"],
+        "expectIPs": ["geoip:!cn"]
       }
-    ],
-    "tag": "dns-out"
+    ]
   },
+
   "inbounds": [
     {
+      "tag": "in-v4",
+      "port": 30191,
+      "listen": "0.0.0.0",
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "dest": "www.bing.com:443",
+          "serverNames": ["www.bing.com"],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": ["50dcc34c59ea05a4"]
+        }
+      }
+    },
+    {
+      "tag": "in-v6",
       "port": 30191,
       "listen": "::",
       "protocol": "vless",
@@ -77,55 +107,47 @@ cat > "$XRAY_CONFIG" <<EOF
       }
     }
   ],
+
   "outbounds": [
     {
-      "tag": "ipv4-out",
+      "tag": "out-v4",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
       },
-      "streamSettings": {
-        "sockopt": {
-          "tcpKeepAliveIdle": 100,
-          "mark": 255
-        }
-      }
+      "sendThrough": "23.27.120.248"
     },
     {
-      "tag": "ipv6-out",
+      "tag": "out-v6",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv6"
       },
-      "streamSettings": {
-        "sockopt": {
-          "tcpKeepAliveIdle": 100,
-          "mark": 255
-        }
-      }
+      "sendThrough": "2400:8d60:0002:0000:0000:0001:4f08:bd65"
     },
     {
-      "tag": "dns-out",
-      "protocol": "dns",
-      "settings": {}
+      "tag": "block",
+      "protocol": "blackhole"
     }
   ],
+
   "routing": {
-    "domainStrategy": "AsIs",
+    "domainStrategy": "IPIfNonMatch",
     "rules": [
       {
         "type": "field",
-        "source": ["::/0"],
-        "outboundTag": "ipv6-out"
+        "inboundTag": ["in-v4"],
+        "outboundTag": "out-v4"
       },
       {
         "type": "field",
-        "source": ["0.0.0.0/0"],
-        "outboundTag": "ipv4-out"
+        "inboundTag": ["in-v6"],
+        "outboundTag": "out-v6"
       }
     ]
   }
 }
+
 
 
 
