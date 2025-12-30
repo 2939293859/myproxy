@@ -1,13 +1,6 @@
 #!/bin/bash
 set -e
-# ================== 安装依赖 ==================
-echo "▶ 安装依赖..."
-apt update -y
-apt install -y curl unzip jq iproute2
 
-# ================== 安装 Xray ==================
-echo "▶ 安装 / 更新 Xray-core..."
-bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 echo "=== 初始化 IPv4 / IPv6 协议隔离环境（含 DNS 修复）==="
 
 # ===== 修复 netns 目录 =====
