@@ -43,12 +43,14 @@ cat > "$XRAY_CONFIG" <<EOF
       {
         "tag": "dns4",
         "address": "8.8.8.8",
-        "queryStrategy": "UseIPv4"
+        "queryStrategy": "UseIPv4",
+        "skipFallback": true
       },
       {
         "tag": "dns6",
-        "address": "2001:4860:4860::8888",
-        "queryStrategy": "UseIPv6"
+        "address": "8.8.8.8",
+        "queryStrategy": "UseIPv6",
+        "skipFallback": true
       }
     ]
   },
@@ -141,6 +143,7 @@ cat > "$XRAY_CONFIG" <<EOF
     ]
   }
 }
+
 
 EOF
 
