@@ -39,15 +39,21 @@ mkdir -p "$XRAY_DIR"
 # ================== IPv4 配置 ==================
 cat > "$XRAY_DIR/v4.json" <<EOF
 {
-  "log": { "loglevel": "warning" },
+  "log": {
+    "loglevel": "warning"
+  },
+
   "inbounds": [
     {
-      "port": $PORT_V4,
+      "port": 30191,
       "listen": "0.0.0.0",
       "protocol": "vless",
       "settings": {
         "clients": [
-          { "id": "$UUID", "flow": "xtls-rprx-vision" }
+          {
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+            "flow": "xtls-rprx-vision"
+          }
         ],
         "decryption": "none"
       },
@@ -55,16 +61,34 @@ cat > "$XRAY_DIR/v4.json" <<EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "dest": "$SNI:443",
-          "serverNames": ["$SNI"],
-          "privateKey": "$PRIVATE_KEY",
-          "shortIds": ["$SHORT_ID"]
+          "dest": "www.bing.com:443",
+          "serverNames": ["www.bing.com"],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": ["50dcc34c59ea05a4"]
         }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
       }
     }
   ],
-  "outbounds": [{ "protocol": "freedom" }]
+
+  "dns": {
+    "servers": ["8.8.8.8", "8.8.4.4"],
+    "queryStrategy": "UseIPv4"
+  },
+
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    }
+  ]
 }
+
 EOF
 
 # ================== IPv6 配置 ==================
