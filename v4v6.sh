@@ -41,16 +41,21 @@ cat > "$XRAY_CONFIG" <<EOF
   "dns": {
     "servers": [
       {
+        "tag": "dns4",
         "address": "8.8.8.8",
-        "domains": ["geosite:geolocation-!cn"],
-        "skipFallback": true
+        "queryStrategy": "UseIPv4"
+      },
+      {
+        "tag": "dns6",
+        "address": "2001:4860:4860::8888",
+        "queryStrategy": "UseIPv6"
       }
-    ],
-    "queryStrategy": "UseIPv4"
+    ]
   },
 
   "inbounds": [
     {
+      "tag": "in-ipv4",
       "port": 30191,
       "listen": "0.0.0.0",
       "protocol": "vless",
@@ -68,13 +73,35 @@ cat > "$XRAY_CONFIG" <<EOF
         "security": "reality",
         "realitySettings": {
           "dest": "www.bing.com:443",
-          "serverNames": [
-            "www.bing.com"
-          ],
+          "serverNames": ["www.bing.com"],
           "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "shortIds": [
-            "50dcc34c59ea05a4"
-          ]
+          "shortIds": ["50dcc34c59ea05a4"]
+        }
+      }
+    },
+
+    {
+      "tag": "in-ipv6",
+      "port": 30192,
+      "listen": "::",
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "dest": "www.bing.com:443",
+          "serverNames": ["www.bing.com"],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": ["50dcc34c59ea05a4"]
         }
       }
     }
@@ -82,13 +109,39 @@ cat > "$XRAY_CONFIG" <<EOF
 
   "outbounds": [
     {
+      "tag": "out-ipv4",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
       }
+    },
+    {
+      "tag": "out-ipv6",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv6"
+      }
     }
-  ]
+  ],
+
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["in-ipv4"],
+        "outboundTag": "out-ipv4",
+        "dnsTag": "dns4"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["in-ipv6"],
+        "outboundTag": "out-ipv6",
+        "dnsTag": "dns6"
+      }
+    ]
+  }
 }
+
 EOF
 
 # ================== 启动服务 ==================
