@@ -24,8 +24,8 @@ apt update -y
 apt install -y curl unzip jq iproute2
 
 # ================== 安装 Xray ==================
-echo "▶ 安装 / 更新 Xray-core..."
-bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
+# echo "▶ 安装 / 更新 Xray-core..."
+# bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
 
 XRAY_BIN=$(command -v xray)
 [ -z "$XRAY_BIN" ] && { echo "❌ 未找到 xray"; exit 1; }
