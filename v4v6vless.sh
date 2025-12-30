@@ -80,13 +80,14 @@ cat > "$XRAY_DIR/v4.json" <<EOF
   },
 
   "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv4"
-      }
+  {
+    "protocol": "freedom",
+    "settings": {
+      "domainStrategy": "UseIPv4"
     }
-  ]
+  }
+]
+
 }
 
 EOF
@@ -138,14 +139,13 @@ cat > "$XRAY_DIR/v6.json" <<EOF
   },
 
   "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv6",
-        "mtu": 1280
-      }
+  {
+    "protocol": "freedom",
+    "settings": {
+      "domainStrategy": "UseIPv6"
     }
-  ]
+  }
+]
 }
 
 EOF
