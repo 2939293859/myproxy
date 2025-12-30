@@ -35,207 +35,59 @@ echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 {
   "log": {
-    "loglevel": "warning",
-    "access": "/var/log/xray/access.log",
-    "error": "/var/log/xray/error.log"
+    "loglevel": "warning"
   },
-  "inbounds": [
-    {
-      "port": 443,
-      "protocol": "vless",
-      "listen": "0.0.0.0",
-      "tag": "inbound-ipv4",
-      "settings": {
-        "clients": [
-          {
-            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "",
-            "level": 0,
-            "email": "ipv4_user@example.com"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "www.bing.com:443",
-          "xver": 0,
-          "serverNames": [
-            "www.bing.com"
-          ],
-          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "minClientVer": "",
-          "maxClientVer": "",
-          "maxTimeDiff": 0,
-          "shortIds": [
-            "50dcc34c59ea05a4"
-          ]
-        }
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": [
-          "http",
-          "tls"
-        ]
-      }
-    },
-    {
-      "port": 8443,
-      "protocol": "vless",
-      "listen": "::",
-      "tag": "inbound-ipv6",
-      "settings": {
-        "clients": [
-          {
-            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
-            "flow": "",
-            "level": 0,
-            "email": "ipv6_user@example.com"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "www.bing.com:443",
-          "xver": 0,
-          "serverNames": [
-            "www.bing.com"
-          ],
-          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
-          "minClientVer": "",
-          "maxClientVer": "",
-          "maxTimeDiff": 0,
-          "shortIds": [
-            "50dcc34c59ea05a4"
-          ]
-        }
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": [
-          "http",
-          "tls"
-        ]
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "tag": "outbound-ipv4",
-      "settings": {
-        "domainStrategy": "UseIPv4"
-      },
-      "streamSettings": {
-        "sockopt": {
-          "mark": 100,
-          "tcpFastOpen": true
-        }
-      }
-    },
-    {
-      "protocol": "freedom",
-      "tag": "outbound-ipv6",
-      "settings": {
-        "domainStrategy": "UseIPv6"
-      },
-      "streamSettings": {
-        "sockopt": {
-          "mark": 200,
-          "tcpFastOpen": true
-        }
-      }
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "block-ipv6-on-ipv4"
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "block-ipv4-on-ipv6"
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "blocked"
-    }
-  ],
+
   "dns": {
     "servers": [
       {
-        "address": "1.1.1.1",
-        "port": 53,
-        "domains": [],
-        "expectIPs": [],
-        "queryStrategy": "UseIPv4"
-      },
-      {
-        "address": "2606:4700:4700::1111",
-        "port": 53,
-        "domains": [],
-        "expectIPs": [],
-        "queryStrategy": "UseIPv6"
+        "address": "8.8.8.8",
+        "domains": ["geosite:geolocation-!cn"],
+        "skipFallback": true
       }
     ],
-    "queryStrategy": "UseIP",
-    "disableCache": false,
-    "disableFallback": true,
-    "tag": "dns_inbound"
+    "queryStrategy": "UseIPv4"
   },
-  "routing": {
-    "domainStrategy": "IPOnDemand",
-    "rules": [
-      {
-        "type": "field",
-        "inboundTag": [
-          "inbound-ipv4"
+
+  "inbounds": [
+    {
+      "port": 30191,
+      "listen": "0.0.0.0",
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "3a734d50-8ad6-4f05-b089-fb7662d7990d",
+            "flow": "xtls-rprx-vision"
+          }
         ],
-        "network": "tcp,udp",
-        "outboundTag": "outbound-ipv4"
+        "decryption": "none"
       },
-      {
-        "type": "field",
-        "inboundTag": [
-          "inbound-ipv6"
-        ],
-        "network": "tcp,udp",
-        "outboundTag": "outbound-ipv6"
-      },
-      {
-        "type": "field",
-        "protocol": [
-          "bittorrent"
-        ],
-        "outboundTag": "blocked"
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "dest": "www.bing.com:443",
+          "serverNames": [
+            "www.bing.com"
+          ],
+          "privateKey": "AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0",
+          "shortIds": [
+            "50dcc34c59ea05a4"
+          ]
+        }
       }
-    ]
-  },
-  "policy": {
-    "levels": {
-      "0": {
-        "handshake": 4,
-        "connIdle": 300,
-        "uplinkOnly": 2,
-        "downlinkOnly": 5,
-        "statsUserUplink": false,
-        "statsUserDownlink": false,
-        "bufferSize": 10240
-      }
-    },
-    "system": {
-      "statsInboundUplink": false,
-      "statsInboundDownlink": false,
-      "statsOutboundUplink": false,
-      "statsOutboundDownlink": false
     }
-  }
+  ],
+
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    }
+  ]
 }
 EOF
 
