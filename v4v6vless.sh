@@ -19,9 +19,9 @@ PUBLIC_KEY="l5XWxm8T69d2JbhjiPSQQIf53iXR0DN3THYDfs-5TAE"
 SHORT_ID="50dcc34c59ea05a4"
 
 # ================== 安装依赖 ==================
-echo "▶ 安装依赖..."
-apt update -y
-apt install -y curl unzip jq iproute2
+# echo "▶ 安装依赖..."
+# apt update -y
+# apt install -y curl unzip jq iproute2
 
 # ================== 安装 Xray ==================
 # echo "▶ 安装 / 更新 Xray-core..."
