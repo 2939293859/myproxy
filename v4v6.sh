@@ -1,138 +1,174 @@
-#!/usr/bin/env bash
-set -e
-
-# ================== 基础参数 ==================
-PORT=30191
-UUID="3a734d50-8ad6-4f05-b089-fb7662d7990d"
-SNI="www.bing.com"
-
-XRAY_CONFIG="/usr/local/etc/xray/config.json"
-
-# ================== REALITY 固定参数 ==================
-PRIVATE_KEY="AHqEoFBhId-0WnCKEJkPNWUUYpohOVdxrIGyX-DFQG0"
-PUBLIC_KEY="l5XWxm8T69d2JbhjiPSQQIf53iXR0DN3THYDfs-5TAE"
-SHORT_ID="50dcc34c59ea05a4"
-
-# ================== 安装依赖 ==================
-echo "▶ 更新系统 & 安装依赖..."
-apt update -y
-apt install -y curl unzip jq openssl
-
-# ================== 安装 Xray ==================
-echo "▶ 安装 / 更新 Xray-core..."
-bash <(curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh)
-
-XRAY_BIN=$(command -v xray)
-if [[ -z "$XRAY_BIN" ]]; then
-  echo "❌ 未找到 xray"
-  exit 1
-fi
-
-mkdir -p /usr/local/etc/xray
-
-# ================== 写入配置 ==================
-echo "▶ 写入 Xray REALITY 配置..."
-cat > "$XRAY_CONFIG" <<EOF
 #!/bin/bash
 set -e
 
-echo "=== 创建网络命名空间（最终稳定版）==="
+echo "=== 初始化 IPv4 / IPv6 协议隔离环境（含 DNS 修复）==="
 
-# ================== 基础参数 ==================
-PUB_NS="ns-public"
-PRIV_NS="ns-private"
+# ===== 修复 netns 目录 =====
+mkdir -p /var/run/netns
+mountpoint -q /var/run/netns || mount --bind /var/run/netns /var/run/netns
 
-PUB_VETH_HOST="veth-pub"
-PUB_VETH_NS="veth-pub-ns"
+# ===== 参数 =====
+NS_IPV4="ns-ipv4"
+NS_IPV6="ns-ipv6"
+ETH_PUBLIC="eth0"  # 主机用于访问外网的物理接口，请根据实际修改（如 ens3、enp0s3 等）
 
-PRIV_VETH_HOST="veth-priv"
-PRIV_VETH_NS="veth-priv-ns"
+# IPv4 网段
+V4_HOST="10.100.0.1/24"
+V4_NS="10.100.0.2/24"
+V4_GW="10.100.0.1"
 
-PUB_NET4_HOST="172.16.100.1/30"
-PUB_NET4_NS="172.16.100.2/30"
+# IPv6 网段（ULA）
+V6_HOST="fd00:1000::1/64"
+V6_NS="fd00:1000::2/64"
+V6_GW="fd00:1000::1"
 
-PRIV_NET4_HOST="172.16.200.1/30"
-PRIV_NET4_NS="172.16.200.2/30"
+# ===== 清理旧配置 =====
+echo "清理旧配置..."
+ip netns del $NS_IPV4 2>/dev/null || true
+ip netns del $NS_IPV6 2>/dev/null || true
+ip link del veth-ipv4 2>/dev/null || true
+ip link del veth-ipv6 2>/dev/null || true
+rm -rf /etc/netns/$NS_IPV4 /etc/netns/$NS_IPV6
 
-ETH_PUBLIC="eth0"
-ETH_PRIVATE="eth1"
+# ===== 创建命名空间 =====
+echo "创建网络命名空间..."
+ip netns add $NS_IPV4
+ip netns add $NS_IPV6
 
-# ================== 清理旧环境 ==================
-ip netns del $PUB_NS 2>/dev/null || true
-ip netns del $PRIV_NS 2>/dev/null || true
-ip link del $PUB_VETH_HOST 2>/dev/null || true
-ip link del $PRIV_VETH_HOST 2>/dev/null || true
+# 保活（防止被 GC）
+ip netns exec $NS_IPV4 sleep infinity &
+IPV4_SLEEP_PID=$!
+ip netns exec $NS_IPV6 sleep infinity &
+IPV6_SLEEP_PID=$!
 
-# ================== 创建 netns ==================
-ip netns add $PUB_NS
-ip netns add $PRIV_NS
+# ==============================
+# === 配置 IPv4 专用命名空间 ===
+# ==============================
+echo "配置 IPv4 专用命名空间 ($NS_IPV4)..."
 
-# 防止 netns 被 GC（关键）
-ip netns exec $PUB_NS bash -c "sleep infinity" &
-ip netns exec $PRIV_NS bash -c "sleep infinity" &
+ip link add veth-ipv4 type veth peer name veth-ipv4-ns
+ip link set veth-ipv4-ns netns $NS_IPV4
 
-# ================== veth - public ==================
-ip link add $PUB_VETH_HOST type veth peer name $PUB_VETH_NS
-ip link set $PUB_VETH_NS netns $PUB_NS
+# 主机端
+ip addr add $V4_HOST dev veth-ipv4
+ip link set veth-ipv4 up
 
-ip addr add $PUB_NET4_HOST dev $PUB_VETH_HOST
-ip link set $PUB_VETH_HOST up
+# 命名空间端
+ip netns exec $NS_IPV4 ip link set lo up
+ip netns exec $NS_IPV4 ip addr add $V4_NS dev veth-ipv4-ns
+ip netns exec $NS_IPV4 ip link set veth-ipv4-ns up
+ip netns exec $NS_IPV4 ip route add default via $V4_GW
 
-ip netns exec $PUB_NS ip addr add $PUB_NET4_NS dev $PUB_VETH_NS
-ip netns exec $PUB_NS ip link set lo up
-ip netns exec $PUB_NS ip link set $PUB_VETH_NS up
-ip netns exec $PUB_NS ip route add default via 172.16.100.1
+# 禁用 IPv6
+ip netns exec $NS_IPV4 sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null
+ip netns exec $NS_IPV4 sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null
 
-# ================== veth - private ==================
-ip link add $PRIV_VETH_HOST type veth peer name $PRIV_VETH_NS
-ip link set $PRIV_VETH_NS netns $PRIV_NS
-
-ip addr add $PRIV_NET4_HOST dev $PRIV_VETH_HOST
-ip link set $PRIV_VETH_HOST up
-
-ip netns exec $PRIV_NS ip addr add $PRIV_NET4_NS dev $PRIV_VETH_NS
-ip netns exec $PRIV_NS ip link set lo up
-ip netns exec $PRIV_NS ip link set $PRIV_VETH_NS up
-ip netns exec $PRIV_NS ip route add default via 172.16.200.1
-
-# ================== 内核转发 ==================
-sysctl -w net.ipv4.ip_forward=1 > /dev/null
-
-# ================== NAT 规则 ==================
-iptables -t nat -A POSTROUTING -s 172.16.100.2 -o $ETH_PUBLIC -j MASQUERADE
-
-# 🚫 禁止 ns-private 出公网
-iptables -A FORWARD -s 172.16.200.2 -o $ETH_PUBLIC -j DROP
-
-# ================== 完成 ==================
-echo ""
-echo "✅ 配置完成"
-echo ""
-echo "测试："
-echo "  公网 IPv4: ip netns exec ns-public ping -c 3 8.8.8.8"
-echo "  内网测试: ip netns exec ns-private ping -c 3 10.1.8.1"
-echo ""
-echo "运行代理示例："
-echo "  ip netns exec ns-public xray run -c /etc/xray/config.json"
-echo "  ip netns exec ns-private your_program"
-
+# 配置 IPv4 DNS
+mkdir -p /etc/netns/$NS_IPV4
+cat > /etc/netns/$NS_IPV4/resolv.conf <<EOF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+options timeout:1
 EOF
 
-# ================== 启动服务 ==================
-echo "▶ 启动 Xray..."
-sed -i '1s/^\xEF\xBB\xBF//' /usr/local/etc/xray/config.json
-systemctl daemon-reexec
-systemctl enable xray
-systemctl restart xray
+# ==============================
+# === 配置 IPv6 专用命名空间 ===
+# ==============================
+echo "配置 IPv6 专用命名空间 ($NS_IPV6)..."
 
-# ================== 输出信息 ==================
-echo
-echo "================= 部署完成 ================="
-echo "地址        : <你的服务器IP>"
-echo "端口        : ${PORT}"
-echo "UUID        : ${UUID}"
-echo "SNI         : ${SNI}"
-echo "Public Key  : ${PUBLIC_KEY}"
-echo "Short ID    : ${SHORT_ID}"
-echo "Flow        : xtls-rprx-vision"
-echo "============================================"
+ip link add veth-ipv6 type veth peer name veth-ipv6-ns
+ip link set veth-ipv6-ns netns $NS_IPV6
+
+# 主机端
+ip -6 addr add $V6_HOST dev veth-ipv6
+ip link set veth-ipv6 up
+
+# 命名空间端
+ip netns exec $NS_IPV6 ip link set lo up
+ip netns exec $NS_IPV6 ip -6 addr add $V6_NS dev veth-ipv6-ns
+ip netns exec $NS_IPV6 ip link set veth-ipv6-ns up
+ip netns exec $NS_IPV6 ip -6 route add default via $V6_GW
+
+# 阻断所有 IPv4 流量（模拟“禁用 IPv4”）
+ip netns exec $NS_IPV6 iptables -P INPUT DROP
+ip netns exec $NS_IPV6 iptables -P FORWARD DROP
+ip netns exec $NS_IPV6 iptables -P OUTPUT DROP
+# （可选）允许本地回环（通常不需要，保持 DROP 更干净）
+# ip netns exec $NS_IPV6 iptables -A INPUT -i lo -j ACCEPT
+# ip netns exec $NS_IPV6 iptables -A OUTPUT -o lo -j ACCEPT
+
+# 配置 IPv6-only DNS（关键修复！）
+mkdir -p /etc/netns/$NS_IPV6
+cat > /etc/netns/$NS_IPV6/resolv.conf <<EOF
+nameserver 2001:4860:4860::8888
+nameserver 2001:4860:4860::8844
+# Cloudflare IPv6 DNS (可选替换)：
+# nameserver 2606:4700:4700::1111
+# nameserver 2606:4700:4700::1001
+options timeout:1
+EOF
+
+# ==============================
+# === 启用主机转发 ===
+# ==============================
+echo "启用 IPv4/IPv6 转发..."
+sysctl -w net.ipv4.ip_forward=1 >/dev/null
+sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null
+sysctl -w net.ipv6.conf.$ETH_PUBLIC.forwarding=1 >/dev/null
+
+# ==============================
+# === 配置 NAT 和防火墙规则 ===
+# ==============================
+echo "配置 NAT 和防火墙规则..."
+
+# ---- IPv4 规则 ----
+iptables -t nat -F POSTROUTING 2>/dev/null || true
+iptables -F FORWARD 2>/dev/null || true
+
+iptables -t nat -A POSTROUTING -s $V4_NS -o $ETH_PUBLIC -j MASQUERADE
+iptables -A FORWARD -i veth-ipv4 -o $ETH_PUBLIC -j ACCEPT
+iptables -A FORWARD -i $ETH_PUBLIC -o veth-ipv4 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# ---- IPv6 规则 ----
+ip6tables -t nat -F POSTROUTING 2>/dev/null || true
+ip6tables -F FORWARD 2>/dev/null || true
+
+# 注意：IPv6 MASQUERADE 需要内核支持（≥3.7）
+ip6tables -t nat -A POSTROUTING -s $V6_NS -o $ETH_PUBLIC -j MASQUERADE
+ip6tables -A FORWARD -i veth-ipv6 -o $ETH_PUBLIC -j ACCEPT
+ip6tables -A FORWARD -i $ETH_PUBLIC -o veth-ipv6 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# ==============================
+# === 验证输出 ===
+# ==============================
+echo ""
+echo "✅ IPv4/IPv6 协议隔离环境创建完成（含 DNS 修复）！"
+echo ""
+echo "=== 命名空间列表 ==="
+ip netns list
+echo ""
+
+echo "=== $NS_IPV4 (纯 IPv4) ==="
+ip netns exec $NS_IPV4 ip -4 addr show veth-ipv4-ns 2>/dev/null
+ip netns exec $NS_IPV4 ip -4 route 2>/dev/null
+echo "DNS:"
+ip netns exec $NS_IPV4 cat /etc/resolv.conf
+echo ""
+
+echo "=== $NS_IPV6 (纯 IPv6) ==="
+ip netns exec $NS_IPV6 ip -6 addr show veth-ipv6-ns 2>/dev/null | grep -v fe80
+ip netns exec $NS_IPV6 ip -6 route 2>/dev/null | grep -v fe80
+echo "DNS:"
+ip netns exec $NS_IPV6 cat /etc/resolv.conf
+echo ""
+
+echo "=== 测试命令 ==="
+echo "# 测试 IPv4 命名空间（应成功）"
+echo "ip netns exec $NS_IPV4 ping -c 2 google.com"
+echo ""
+echo "# 测试 IPv6 命名空间（应成功）"
+echo "ip netns exec $NS_IPV6 ping6 -c 2 ipv6.google.com"
+echo ""
+echo "# 进入命名空间进行交互测试"
+echo "ip netns exec $NS_IPV4 bash   # 纯 IPv4 环境"
+echo "ip netns exec $NS_IPV6 bash   # 纯 IPv6 环境"
