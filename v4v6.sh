@@ -34,85 +34,87 @@ mkdir -p /usr/local/etc/xray
 echo "▶ 写入 Xray REALITY 配置..."
 cat > "$XRAY_CONFIG" <<EOF
 #!/bin/bash
-
-# 网络命名空间双栈隔离配置脚本
-
 set -e
 
-echo "开始配置网络命名空间隔离..."
+echo "=== 创建网络命名空间（最终稳定版）==="
 
-# 1. 创建两个网络命名空间
-echo "创建网络命名空间..."
-ip netns add ns-public   # 用于eth0 (公网接口)
-ip netns add ns-private  # 用于eth1 (内网接口)
+# ================== 基础参数 ==================
+PUB_NS="ns-public"
+PRIV_NS="ns-private"
 
-# 2. 将网卡移入对应的命名空间
-echo "移动网络接口到命名空间..."
-ip link set eth0 netns ns-public
-ip link set eth1 netns ns-private
+PUB_VETH_HOST="veth-pub"
+PUB_VETH_NS="veth-pub-ns"
 
-# 3. 配置ns-public命名空间 (eth0 - 公网)
-echo "配置公网命名空间..."
+PRIV_VETH_HOST="veth-priv"
+PRIV_VETH_NS="veth-priv-ns"
 
-# 启用loopback和eth0
-ip netns exec ns-public ip link set lo up
-ip netns exec ns-public ip link set eth0 up
+PUB_NET4_HOST="172.16.100.1/30"
+PUB_NET4_NS="172.16.100.2/30"
 
-# 配置IPv4地址
-ip netns exec ns-public ip addr add 23.27.120.248/24 brd 23.27.120.255 dev eth0
+PRIV_NET4_HOST="172.16.200.1/30"
+PRIV_NET4_NS="172.16.200.2/30"
 
-# 配置IPv6地址
-ip netns exec ns-public ip -6 addr add 2400:8d60:2::1:4f08:bd65/48 dev eth0
+ETH_PUBLIC="eth0"
+ETH_PRIVATE="eth1"
 
-# 配置IPv4默认路由
-ip netns exec ns-public ip route add default via 23.27.120.1 dev eth0
+# ================== 清理旧环境 ==================
+ip netns del $PUB_NS 2>/dev/null || true
+ip netns del $PRIV_NS 2>/dev/null || true
+ip link del $PUB_VETH_HOST 2>/dev/null || true
+ip link del $PRIV_VETH_HOST 2>/dev/null || true
 
-# 配置IPv6默认路由
-ip netns exec ns-public ip -6 route add default via 2400:8d60:2::1 dev eth0
+# ================== 创建 netns ==================
+ip netns add $PUB_NS
+ip netns add $PRIV_NS
 
-# 4. 配置ns-private命名空间 (eth1 - 内网)
-echo "配置内网命名空间..."
+# 防止 netns 被 GC（关键）
+ip netns exec $PUB_NS bash -c "sleep infinity" &
+ip netns exec $PRIV_NS bash -c "sleep infinity" &
 
-# 启用loopback和eth1
-ip netns exec ns-private ip link set lo up
-ip netns exec ns-private ip link set eth1 up
+# ================== veth - public ==================
+ip link add $PUB_VETH_HOST type veth peer name $PUB_VETH_NS
+ip link set $PUB_VETH_NS netns $PUB_NS
 
-# 配置IPv4地址
-ip netns exec ns-private ip addr add 10.1.8.90/8 brd 10.255.255.255 dev eth1
+ip addr add $PUB_NET4_HOST dev $PUB_VETH_HOST
+ip link set $PUB_VETH_HOST up
 
-# 配置IPv4路由（10.0.0.0/8网段）
-ip netns exec ns-private ip route add 10.0.0.0/8 dev eth1 src 10.1.8.90
+ip netns exec $PUB_NS ip addr add $PUB_NET4_NS dev $PUB_VETH_NS
+ip netns exec $PUB_NS ip link set lo up
+ip netns exec $PUB_NS ip link set $PUB_VETH_NS up
+ip netns exec $PUB_NS ip route add default via 172.16.100.1
 
-# 5. 验证配置
+# ================== veth - private ==================
+ip link add $PRIV_VETH_HOST type veth peer name $PRIV_VETH_NS
+ip link set $PRIV_VETH_NS netns $PRIV_NS
+
+ip addr add $PRIV_NET4_HOST dev $PRIV_VETH_HOST
+ip link set $PRIV_VETH_HOST up
+
+ip netns exec $PRIV_NS ip addr add $PRIV_NET4_NS dev $PRIV_VETH_NS
+ip netns exec $PRIV_NS ip link set lo up
+ip netns exec $PRIV_NS ip link set $PRIV_VETH_NS up
+ip netns exec $PRIV_NS ip route add default via 172.16.200.1
+
+# ================== 内核转发 ==================
+sysctl -w net.ipv4.ip_forward=1 > /dev/null
+
+# ================== NAT 规则 ==================
+iptables -t nat -A POSTROUTING -s 172.16.100.2 -o $ETH_PUBLIC -j MASQUERADE
+
+# 🚫 禁止 ns-private 出公网
+iptables -A FORWARD -s 172.16.200.2 -o $ETH_PUBLIC -j DROP
+
+# ================== 完成 ==================
 echo ""
-echo "===== 公网命名空间 (ns-public) 配置 ====="
-echo "--- IPv4 地址 ---"
-ip netns exec ns-public ip -4 addr show eth0
-echo "--- IPv6 地址 ---"
-ip netns exec ns-public ip -6 addr show eth0
-echo "--- IPv4 路由 ---"
-ip netns exec ns-public ip -4 route
-echo "--- IPv6 路由 ---"
-ip netns exec ns-public ip -6 route
-
+echo "✅ 配置完成"
 echo ""
-echo "===== 内网命名空间 (ns-private) 配置 ====="
-echo "--- IPv4 地址 ---"
-ip netns exec ns-private ip -4 addr show eth1
-echo "--- IPv4 路由 ---"
-ip netns exec ns-private ip -4 route
-
-echo ""
-echo "配置完成！"
-echo ""
-echo "使用方法："
-echo "  公网命名空间: ip netns exec ns-public <command>"
-echo "  内网命名空间: ip netns exec ns-private <command>"
-echo ""
-echo "测试连接："
-echo "  公网IPv4: ip netns exec ns-public ping -c 3 8.8.8.8"
-echo "  公网IPv6: ip netns exec ns-public ping6 -c 3 2001:4860:4860::8888"
+echo "测试："
+echo "  公网 IPv4: ip netns exec ns-public ping -c 3 8.8.8.8"
 echo "  内网测试: ip netns exec ns-private ping -c 3 10.1.8.1"
+echo ""
+echo "运行代理示例："
+echo "  ip netns exec ns-public xray run -c /etc/xray/config.json"
+echo "  ip netns exec ns-private your_program"
 
 EOF
 
