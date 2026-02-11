@@ -53,7 +53,7 @@ cat > "$XRAY_CONFIG" <<EOF
         "decryption": "none"
       },
       "streamSettings": {
-        "network": "tcp",
+        "network": "kcp",
         "security": "reality",
         "realitySettings": {
           "dest": "www.bing.com:443",
